@@ -9,11 +9,13 @@ import time
 
 import requests
 
+from pathlib import Path
+
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 except ImportError:
-    pass
+    pass  # python-dotenv not installed: only real environment variables are used
 
 TIMEOUT = 30
 
