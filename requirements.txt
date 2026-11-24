@@ -5,4 +5,6 @@ pandas==2.3.1
 scikit-learn==1.7.1
 matplotlib==3.10.3
 xgboost==3.0.2
+python-dotenv==1.1.1
+requests==2.32.4
 yfinance==0.2.65
