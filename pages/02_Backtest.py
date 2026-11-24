@@ -1,0 +1,54 @@
+import pandas as pd
+import streamlit as st
+import yfinance as yf
+
+from src.backtest import MODELS, walk_forward
+
+st.set_page_config(page_title="Backtest", page_icon="🧪", layout="wide")
+from src.ui import hide_chrome
+hide_chrome()
+st.title("🧪 Walk-Forward Backtest")
+st.caption("Compare models on past data. Each fold trains only on data before its test block, so there is no look-ahead.")
+
+ticker = st.sidebar.text_input("Ticker", "AAPL").upper()
+start = st.sidebar.date_input("Start Date", pd.to_datetime("2015-01-01"))
+models = st.sidebar.multiselect("Models", MODELS, default=["xgboost", "naive"])
+lookback = st.sidebar.slider("Lookback (days)", 20, 100, 60)
+folds = st.sidebar.slider("Folds", 2, 8, 4)
+epochs = st.sidebar.slider("LSTM epochs", 3, 30, 8)
+
+if st.sidebar.button("Run Backtest"):
+    if not models:
+        st.warning("Pick at least one model.")
+        st.stop()
+    with st.spinner("Downloading data..."):
+        df = yf.download(ticker, start=str(start), auto_adjust=True, progress=False)
+    if df.empty:
+        st.error("No data returned for this ticker.")
+        st.stop()
+    close = df["Close"].squeeze().dropna().values
+
+    summary, curves = [], {}
+    for name in models:
+        with st.spinner(f"Backtesting {name}..."):
+            try:
+                preds, fold_df, overall = walk_forward(close, name, lookback, folds, epochs)
+            except ValueError as e:
+                st.error(str(e))
+                st.stop()
+        summary.append({"Model": name, **overall})
+        curves[name] = preds
+        with st.expander(f"{name}: per-fold metrics"):
+            st.dataframe(fold_df.round(3), hide_index=True)
+
+    st.subheader("Overall metrics (lower is better)")
+    st.dataframe(pd.DataFrame(summary).round(3), hide_index=True)
+
+    first = next(iter(curves.values()))
+    chart = pd.DataFrame({"Actual": first.set_index("index")["actual"]})
+    for name, p in curves.items():
+        chart[name] = p.set_index("index")["predicted"]
+    st.subheader("Actual vs predicted (test periods)")
+    st.line_chart(chart)
+else:
+    st.info("Choose settings in the sidebar and click **Run Backtest**.")

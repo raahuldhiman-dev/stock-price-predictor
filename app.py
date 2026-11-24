@@ -9,6 +9,8 @@ from datetime import date, timedelta
 
 # --- Streamlit Config ---
 st.set_page_config(page_title="Stock Price Predictor", page_icon="📈", layout="wide")
+from src.ui import hide_chrome
+hide_chrome()
 st.title("📈 Stock Price Prediction using LSTM")
 st.page_link("pages/01_About.py", label="About this app", icon="ℹ️")
 

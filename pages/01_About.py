@@ -1,6 +1,8 @@
 import streamlit as st
 
 st.set_page_config(page_title="About | Stock Price Predictor", page_icon="ℹ️")
+from src.ui import hide_chrome
+hide_chrome()
 
 st.title("ℹ️ About This App")
 st.markdown(
