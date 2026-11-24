@@ -158,6 +158,12 @@ python main.py
 
 ---
 
+## Deployment
+
+This is a Streamlit app using TensorFlow, so it cannot run on Vercel (no persistent server, and TensorFlow exceeds the serverless size limit). Deploy it to Render (a `render.yaml` blueprint is included), Streamlit Community Cloud, or Hugging Face Spaces, with `app.py` as the entrypoint. On Render use at least the Starter plan, since TensorFlow training needs more than 512 MB of RAM.
+
+---
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
