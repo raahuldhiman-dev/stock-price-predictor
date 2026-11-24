@@ -5,6 +5,7 @@ Keys come from environment variables (or a local .env file), never from code:
 Optional overrides: GROQ_MODEL, GEMINI_MODEL
 """
 import os
+import time
 
 import requests
 
@@ -21,19 +22,27 @@ class LLMError(Exception):
     pass
 
 
+def _post(url, retries=2, **kw):
+    """POST with a short retry on rate limit / overload (429, 5xx)."""
+    for attempt in range(retries + 1):
+        r = requests.post(url, timeout=TIMEOUT, **kw)
+        if r.status_code not in (429, 500, 502, 503, 504) or attempt == retries:
+            return r
+        time.sleep(1.5 * (attempt + 1))
+
+
 def _groq(prompt, system):
     key = os.getenv("GROQ_API_KEY")
     if not key:
         raise LLMError("GROQ_API_KEY not set")
-    r = requests.post(
+    r = _post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {key}"},
         json={
-            "model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
             "temperature": 0.3,
         },
-        timeout=TIMEOUT,
     )
     if r.status_code != 200:
         raise LLMError(f"Groq HTTP {r.status_code}")
@@ -44,8 +53,8 @@ def _gemini(prompt, system):
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         raise LLMError("GEMINI_API_KEY not set")
-    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-    r = requests.post(
+    model = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+    r = _post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         headers={"x-goog-api-key": key},
         json={
@@ -53,7 +62,6 @@ def _gemini(prompt, system):
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.3},
         },
-        timeout=TIMEOUT,
     )
     if r.status_code != 200:
         raise LLMError(f"Gemini HTTP {r.status_code}")
